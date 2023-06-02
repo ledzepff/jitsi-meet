@@ -1,3 +1,5 @@
+import { AppProps } from '@ledzepff/excalidraw';
+
 /**
  * Fixed name of the whiteboard fake participant.
  */
@@ -11,8 +13,28 @@ export const WHITEBOARD_ID = 'whiteboard';
 /**
  * Whiteboard UI Options.
  */
-export const WHITEBOARD_UI_OPTIONS = {
+export const WHITEBOARD_UI_OPTIONS: AppProps['UIOptions'] = {
     canvasActions: {
+        changeViewBackgroundColor: true,
+        clearCanvas: true,
+        export: { saveFileToDisk: true },
+        loadScene: true,
+        saveToActiveFile: true,
+        toggleTheme: null,
+        saveAsImage: true
+    }
+};
+
+/* export const WHITEBOARD_UI_OPTIONS = {
+    changeViewBackgroundColor: true,
+    clearCanvas: true,
+    export: true,
+    loadScene: true,
+    saveToActiveFile: true,
+    toggleTheme: true,
+    saveAsImage: true
+
+     canvasActions: {
         allowedShapes: [
             'arrow', 'diamond', 'ellipse', 'freedraw', 'line', 'rectangle', 'selection', 'text'
         ],
@@ -51,4 +73,4 @@ export const WHITEBOARD_UI_OPTIONS = {
             hideTheme: true
         }
     }
-};
+}; */

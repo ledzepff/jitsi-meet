@@ -1,4 +1,6 @@
-import { ExcalidrawApp } from '@jitsi/excalidraw';
+import { ExcalidrawApp, THEME } from '@ledzepff/excalidraw';
+import { ExcalidrawAPIRefValue } from '@ledzepff/excalidraw/types/types';
+import { ForwardRef } from '@ledzepff/excalidraw/types/utility-types';
 import clsx from 'clsx';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { WithTranslation } from 'react-i18next';
@@ -41,7 +43,7 @@ interface IDimensions {
  * @returns {JSX.Element} - The React component.
  */
 const Whiteboard = (props: WithTranslation): JSX.Element => {
-    const excalidrawRef = useRef<any>(null);
+    const excalidrawRef = useRef<ForwardRef<ExcalidrawAPIRefValue>>(null);
     const collabAPIRef = useRef<any>(null);
 
     const isOpen = useSelector(isWhiteboardOpen);
@@ -137,8 +139,9 @@ const Whiteboard = (props: WithTranslation): JSX.Element => {
                                 isCollaborating: true,
 
                                 // @ts-ignore
-                                ref: excalidrawRef,
-                                theme: 'light',
+                                excalidrawRef,
+
+                                theme: THEME.DARK,
                                 UIOptions: WHITEBOARD_UI_OPTIONS
                             }}
                             getCollabAPI = { getCollabAPI } />
