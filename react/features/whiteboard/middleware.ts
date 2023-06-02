@@ -1,4 +1,4 @@
-import { generateCollaborationLinkData } from '@jitsi/excalidraw';
+import { generateCollaborationLinkData } from '@ledzepff/excalidraw';
 import { AnyAction } from 'redux';
 
 import { IStore } from '../app/types';
