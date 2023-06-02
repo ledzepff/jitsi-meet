@@ -292,7 +292,7 @@ export function getVisitorOptions(stateful: IStateful, params: Array<string>) {
 
     const config = toState(stateful)['features/base/config'];
 
-    if (!config || !config.hosts) {
+    if (!config?.hosts) {
         logger.warn('Wrong configuration, missing hosts.');
 
         return;
@@ -300,7 +300,8 @@ export function getVisitorOptions(stateful: IStateful, params: Array<string>) {
 
     if (!vnode) {
         // this is redirecting back to main, lets restore config
-        // no point of updating disableFocus, we can skip the initial iq to jicofo
+        // not updating disableFocus, as if the room capacity is full the promotion to the main room will fail
+        // and the visitor will be redirected back to a vnode from jicofo
         if (config.oldConfig && username) {
             return {
                 hosts: {
@@ -310,6 +311,7 @@ export function getVisitorOptions(stateful: IStateful, params: Array<string>) {
                 focusUserJid: focusJid,
                 disableLocalStats: false,
                 bosh: config.oldConfig.bosh && appendURLParam(config.oldConfig.bosh, 'customusername', username),
+                p2p: config.oldConfig.p2p,
                 websocket: config.oldConfig.websocket
                     && appendURLParam(config.oldConfig.websocket, 'customusername', username),
                 oldConfig: undefined // clears it up
@@ -326,6 +328,7 @@ export function getVisitorOptions(stateful: IStateful, params: Array<string>) {
         },
         focusUserJid: config.focusUserJid,
         bosh: config.bosh,
+        p2p: config.p2p,
         websocket: config.websocket
     };
 
@@ -341,6 +344,10 @@ export function getVisitorOptions(stateful: IStateful, params: Array<string>) {
         disableFocus: true, // This flag disables sending the initial conference request
         disableLocalStats: true,
         bosh: config.bosh && appendURLParam(config.bosh, 'vnode', vnode),
+        p2p: {
+            ...config.p2p,
+            enabled: false
+        },
         websocket: config.websocket && appendURLParam(config.websocket, 'vnode', vnode)
     };
 }

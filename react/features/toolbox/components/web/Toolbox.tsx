@@ -1,4 +1,5 @@
 import { withStyles } from '@mui/styles';
+import clsx from 'clsx';
 import React, { Component, RefObject } from 'react';
 import { WithTranslation } from 'react-i18next';
 import { batch, connect } from 'react-redux';
@@ -6,7 +7,7 @@ import { batch, connect } from 'react-redux';
 import { isSpeakerStatsDisabled } from '../../../../features/speaker-stats/functions';
 import { ACTION_SHORTCUT_TRIGGERED, createShortcutEvent, createToolbarEvent } from '../../../analytics/AnalyticsEvents';
 import { sendAnalytics } from '../../../analytics/functions';
-import { IReduxState } from '../../../app/types';
+import { IReduxState, IStore } from '../../../app/types';
 import { IJitsiConference } from '../../../base/conference/reducer';
 import { VISITORS_MODE_BUTTONS } from '../../../base/config/constants';
 import {
@@ -30,7 +31,6 @@ import {
 import { getLocalVideoTrack } from '../../../base/tracks/functions.web';
 import { ITrack } from '../../../base/tracks/types';
 import ContextMenu from '../../../base/ui/components/web/ContextMenu';
-import ContextMenuItemGroup from '../../../base/ui/components/web/ContextMenuItemGroup';
 import { toggleChat } from '../../../chat/actions.web';
 import ChatButton from '../../../chat/components/web/ChatButton';
 import EmbedMeetingButton from '../../../embed-meeting/components/EmbedMeetingButton';
@@ -54,9 +54,10 @@ import {
     addReactionToBuffer,
     toggleReactionsMenuVisibility
 } from '../../../reactions/actions.web';
+import RaiseHandButton from '../../../reactions/components/web/RaiseHandButton';
 import ReactionsMenuButton from '../../../reactions/components/web/ReactionsMenuButton';
 import { REACTIONS } from '../../../reactions/constants';
-import { isReactionsEnabled } from '../../../reactions/functions.web';
+import { isReactionsButtonEnabled, isReactionsEnabled } from '../../../reactions/functions.web';
 import LiveStreamButton from '../../../recording/components/LiveStream/web/LiveStreamButton';
 import RecordButton from '../../../recording/components/Recording/web/RecordButton';
 import { isSalesforceEnabled } from '../../../salesforce/functions';
@@ -274,6 +275,11 @@ interface IProps extends WithTranslation {
     _raisedHand: boolean;
 
     /**
+     * Whether or not to display reactions in separate button.
+     */
+    _reactionsButtonEnabled: boolean;
+
+    /**
      * Whether or not reactions feature is enabled.
      */
     _reactionsEnabled: boolean;
@@ -287,6 +293,11 @@ interface IProps extends WithTranslation {
      * Whether or not the local participant is sharing a YouTube video.
      */
     _sharingVideo?: boolean;
+
+    /**
+     * Whether the toolbox should be shifted up or not.
+     */
+    _shiftUp: boolean;
 
     /**
      * Whether or not the shortcut buttons are enabled.
@@ -326,7 +337,7 @@ interface IProps extends WithTranslation {
     /**
      * Invoked to active other features of the app.
      */
-    dispatch: Function;
+    dispatch: IStore['dispatch'];
 
     /**
      * Explicitly passed array with the buttons which this Toolbox should display.
@@ -571,7 +582,7 @@ class Toolbox extends Component<IProps> {
 
         return (
             <div
-                className = { rootClassNames }
+                className = { clsx(rootClassNames, this.props._shiftUp && 'shift-up') }
                 id = 'new-toolbox'>
                 { this._renderToolboxContent() }
             </div>
@@ -717,6 +728,7 @@ class Toolbox extends Component<IProps> {
             _isNarrowLayout,
             _isSpeakerStatsDisabled,
             _multiStreamModeEnabled,
+            _reactionsButtonEnabled,
             _reactionsEnabled,
             _screenSharing,
             _shortcutsEnabled,
@@ -755,8 +767,21 @@ class Toolbox extends Component<IProps> {
             group: 2
         };
 
-        const raisehand = (!_reactionsEnabled || (!_isNarrowLayout && !_isMobile)) && {
+        // In Narrow layout and mobile web we are using drawer for popups and that is why it is better to include
+        // all forms of reactions in the overflow menu. Otherwise the toolbox will be hidden and the reactions popup
+        // misaligned.
+
+        const showReactionsAsPartOfRaiseHand
+            = !_reactionsButtonEnabled && _reactionsEnabled && !_isNarrowLayout && !_isMobile;
+        const raisehand = {
             key: 'raisehand',
+            Content: showReactionsAsPartOfRaiseHand ? ReactionsMenuButton : RaiseHandButton,
+            handleClick: this._onToolbarToggleRaiseHand,
+            group: 2
+        };
+
+        const reactions = _reactionsButtonEnabled && _reactionsEnabled && {
+            key: 'reactions',
             Content: ReactionsMenuButton,
             handleClick: this._onToolbarToggleRaiseHand,
             group: 2
@@ -931,6 +956,7 @@ class Toolbox extends Component<IProps> {
             desktop,
             chat,
             raisehand,
+            reactions,
             participants,
             invite,
             tileview,
@@ -1015,9 +1041,8 @@ class Toolbox extends Component<IProps> {
 
         this._setButtonsNotifyClickMode(buttons);
         const isHangupVisible = isToolbarButtonEnabled('hangup', _toolbarButtons);
-        const { order } = THRESHOLDS.find(({ width }) => _clientWidth > width)
+        let { order } = THRESHOLDS.find(({ width }) => _clientWidth > width)
             || THRESHOLDS[THRESHOLDS.length - 1];
-        let sliceIndex = order.length + 2;
 
         const keys = Object.keys(buttons);
 
@@ -1028,6 +1053,11 @@ class Toolbox extends Component<IProps> {
             !_jwtDisabledButons.includes(key)
             && (isToolbarButtonEnabled(key, _toolbarButtons) || isToolbarButtonEnabled(alias, _toolbarButtons))
         );
+        const filteredKeys = filtered.map(button => button.key);
+
+        order = order.filter(key => filteredKeys.includes(buttons[key as keyof typeof buttons].key));
+
+        let sliceIndex = order.length + 2;
 
         if (isHangupVisible) {
             sliceIndex -= 1;
@@ -1412,6 +1442,7 @@ class Toolbox extends Component<IProps> {
             _overflowDrawer,
             _overflowMenuVisible,
             _reactionsEnabled,
+            _reactionsButtonEnabled,
             _toolbarButtons,
             classes,
             t
@@ -1421,6 +1452,12 @@ class Toolbox extends Component<IProps> {
         const containerClassName = `toolbox-content${_isMobile || _isNarrowLayout ? ' toolbox-content-mobile' : ''}`;
 
         const { mainMenuButtons, overflowMenuButtons } = this._getVisibleButtons();
+        const raiseHandInOverflowMenu = overflowMenuButtons.some(({ key }) => key === 'raisehand');
+        const showReactionsInOverflowMenu
+            = (_reactionsEnabled && !_reactionsButtonEnabled
+                && (raiseHandInOverflowMenu || _isNarrowLayout || _isMobile))
+            || overflowMenuButtons.some(({ key }) => key === 'reactions');
+        const showRaiseHandInReactionsMenu = showReactionsInOverflowMenu && raiseHandInOverflowMenu;
 
         return (
             <div className = { containerClassName }>
@@ -1444,47 +1481,36 @@ class Toolbox extends Component<IProps> {
                         {Boolean(overflowMenuButtons.length) && (
                             <OverflowMenuButton
                                 ariaControls = 'overflow-menu'
-                                isOpen = { _overflowMenuVisible }
-                                key = 'overflow-menu'
-                                onVisibilityChange = { this._onSetOverflowVisible }
-                                showMobileReactions = {
-                                    _reactionsEnabled && (_isMobile || _isNarrowLayout)
-                                }>
-                                <ContextMenu
-                                    accessibilityLabel = { t(toolbarAccLabel) }
-                                    className = { classes.contextMenu }
-                                    hidden = { false }
-                                    id = 'overflow-context-menu'
-                                    inDrawer = { _overflowDrawer }
-                                    onKeyDown = { this._onEscKey }>
-                                    {overflowMenuButtons.reduce((acc, val) => {
-                                        if (acc.length) {
-                                            const prev = acc[acc.length - 1];
-                                            const group = prev[prev.length - 1].group;
+                                buttons = { overflowMenuButtons.reduce((acc, val) => {
+                                    if (val.key === 'reactions' && showReactionsInOverflowMenu) {
+                                        return acc;
+                                    }
 
-                                            if (group === val.group) {
-                                                prev.push(val);
-                                            } else {
-                                                acc.push([ val ]);
-                                            }
+                                    if (val.key === 'raisehand' && showRaiseHandInReactionsMenu) {
+                                        return acc;
+                                    }
+
+                                    if (acc.length) {
+                                        const prev = acc[acc.length - 1];
+                                        const group = prev[prev.length - 1].group;
+
+                                        if (group === val.group) {
+                                            prev.push(val);
                                         } else {
                                             acc.push([ val ]);
                                         }
+                                    } else {
+                                        acc.push([ val ]);
+                                    }
 
-                                        return acc;
-                                    }, []).map((buttonGroup: any) => (
-                                        <ContextMenuItemGroup key = { `group-${buttonGroup[0].group}` }>
-                                            {buttonGroup.map(({ key, Content, ...rest }: any) => (
-                                                key !== 'raisehand' || !_reactionsEnabled)
-                                                && <Content
-                                                    { ...rest }
-                                                    buttonKey = { key }
-                                                    contextMenu = { true }
-                                                    key = { key }
-                                                    showLabel = { true } />)}
-                                        </ContextMenuItemGroup>))}
-                                </ContextMenu>
-                            </OverflowMenuButton>
+                                    return acc;
+                                }, []) }
+                                isOpen = { _overflowMenuVisible }
+                                key = 'overflow-menu'
+                                onToolboxEscKey = { this._onEscKey }
+                                onVisibilityChange = { this._onSetOverflowVisible }
+                                showRaiseHandInReactionsMenu = { showRaiseHandInReactionsMenu }
+                                showReactionsMenu = { showReactionsInOverflowMenu } />
                         )}
 
                         { isToolbarButtonEnabled('hangup', _toolbarButtons) && (
@@ -1554,6 +1580,7 @@ function _mapStateToProps(state: IReduxState, ownProps: any) {
     const localVideo = getLocalVideoTrack(state['features/base/tracks']);
     const { clientWidth } = state['features/base/responsive-ui'];
     let toolbarButtons = ownProps.toolbarButtons || getToolbarButtons(state);
+    const _reactionsEnabled = isReactionsEnabled(state);
 
     if (iAmVisitor(state)) {
         toolbarButtons = VISITORS_MODE_BUTTONS.filter(e => toolbarButtons.indexOf(e) > -1);
@@ -1590,8 +1617,10 @@ function _mapStateToProps(state: IReduxState, ownProps: any) {
         _overflowDrawer: overflowDrawer,
         _participantsPaneOpen: getParticipantsPaneOpen(state),
         _raisedHand: hasRaisedHand(localParticipant),
-        _reactionsEnabled: isReactionsEnabled(state),
+        _reactionsButtonEnabled: isReactionsButtonEnabled(state),
+        _reactionsEnabled,
         _screenSharing: isScreenVideoShared(state),
+        _shiftUp: state['features/toolbox'].shiftUp,
         _shortcutsEnabled: areKeyboardShortcutsEnabled(state),
         _tileViewEnabled: shouldDisplayTileView(state),
         _toolbarButtons: toolbarButtons,

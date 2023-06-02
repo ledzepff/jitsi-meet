@@ -9,6 +9,7 @@ import {
 import { openDialog } from '../base/dialog/actions';
 import i18next from '../base/i18n/i18next';
 import { updateSettings } from '../base/settings/actions';
+import { getLocalVideoTrack } from '../base/tracks/functions.any';
 import { disableKeyboardShortcuts, enableKeyboardShortcuts } from '../keyboard-shortcuts/actions';
 import { toggleBackgroundEffect } from '../virtual-background/actions';
 import virtualBackgroundLogger from '../virtual-background/logger';
@@ -24,8 +25,7 @@ import {
     getMoreTabProps,
     getNotificationsTabProps,
     getProfileTabProps,
-    getShortcutsTabProps,
-    getVirtualBackgroundTabProps
+    getShortcutsTabProps
 } from './functions.web';
 
 /**
@@ -102,6 +102,14 @@ export function submitMoreTab(newState: any) {
         if (newState.maxStageParticipants !== currentState.maxStageParticipants) {
             dispatch(updateSettings({ maxStageParticipants: Number(newState.maxStageParticipants) }));
         }
+
+        if (newState.hideSelfView !== currentState.hideSelfView) {
+            dispatch(updateSettings({ disableSelfView: newState.hideSelfView }));
+        }
+
+        if (newState.currentLanguage !== currentState.currentLanguage) {
+            i18next.changeLanguage(newState.currentLanguage);
+        }
     };
 }
 
@@ -151,14 +159,6 @@ export function submitProfileTab(newState: any) {
 
         if (newState.email !== currentState.email) {
             APP.conference.changeLocalEmail(newState.email);
-        }
-
-        if (newState.hideSelfView !== currentState.hideSelfView) {
-            dispatch(updateSettings({ disableSelfView: newState.hideSelfView }));
-        }
-
-        if (newState.currentLanguage !== currentState.currentLanguage) {
-            i18next.changeLanguage(newState.currentLanguage);
         }
     };
 }
@@ -264,10 +264,11 @@ export function submitShortcutsTab(newState: any) {
  */
 export function submitVirtualBackgroundTab(newState: any, isCancel = false) {
     return async (dispatch: IStore['dispatch'], getState: IStore['getState']) => {
-        const currentState = getVirtualBackgroundTabProps(getState());
+        const state = getState();
+        const track = getLocalVideoTrack(state['features/base/tracks'])?.jitsiTrack;
 
         if (newState.options?.selectedThumbnail) {
-            await dispatch(toggleBackgroundEffect(newState.options, currentState._jitsiTrack));
+            await dispatch(toggleBackgroundEffect(newState.options, track));
 
             if (!isCancel) {
                 // Set x scale to default value.

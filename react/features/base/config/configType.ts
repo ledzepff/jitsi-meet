@@ -18,6 +18,7 @@ type ToolbarButtons = 'camera' |
     'participants-pane' |
     'profile' |
     'raisehand' |
+    'reactions' |
     'recording' |
     'security' |
     'select-background' |
@@ -141,6 +142,7 @@ export interface IConfig {
         rtcstatsEndpoint?: string;
         rtcstatsPollInterval?: number;
         rtcstatsSendSdp?: boolean;
+        rtcstatsStoreLogs?: boolean;
         rtcstatsUseLegacy?: boolean;
         scriptURLs?: Array<string>;
         whiteListedEvents?: string[];
@@ -169,6 +171,7 @@ export interface IConfig {
     }>;
     callDisplayName?: string;
     callFlowsEnabled?: boolean;
+    callHandle?: string;
     callStatsConfigParams?: {
         additionalIDs?: {
             customerID?: string;
@@ -190,6 +193,7 @@ export interface IConfig {
     };
     callStatsID?: string;
     callStatsSecret?: string;
+    callUUID?: string;
     channelLastN?: number;
     chromeExtensionBanner?: {
         chromeExtensionsInfo?: Array<{ id: string; path: string; }>;
@@ -405,6 +409,7 @@ export interface IConfig {
     legalUrls?: {
         helpCentre: string;
         privacy: string;
+        security: string;
         terms: string;
     };
     liveStreaming?: {

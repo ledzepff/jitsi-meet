@@ -67,7 +67,7 @@ import logger from './logger';
 /**
  * Handler for before unload event.
  */
-let beforeUnloadHandler: Function | undefined;
+let beforeUnloadHandler: (() => void) | undefined;
 
 /**
  * Implements the middleware of the feature base/conference.
@@ -289,7 +289,12 @@ function _conferenceJoined({ dispatch, getState }: IStore, next: Function, actio
         dispatch(conferenceWillLeave(conference));
     };
 
-    // @ts-ignore
+    if (!iAmVisitor(getState())) {
+        // if a visitor is promoted back to main room and want to join an empty breakout room
+        // we need to send iq to jicofo, so it can join/create the breakout room
+        dispatch(overwriteConfig({ disableFocus: false }));
+    }
+
     window.addEventListener(disableBeforeUnloadHandlers ? 'unload' : 'beforeunload', beforeUnloadHandler);
 
     if (requireDisplayName
@@ -507,7 +512,6 @@ function _removeUnloadHandler(getState: IStore['getState']) {
     if (typeof beforeUnloadHandler !== 'undefined') {
         const { disableBeforeUnloadHandlers = false } = getState()['features/base/config'];
 
-        // @ts-ignore
         window.removeEventListener(disableBeforeUnloadHandlers ? 'unload' : 'beforeunload', beforeUnloadHandler);
         beforeUnloadHandler = undefined;
     }

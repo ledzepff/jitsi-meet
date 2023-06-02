@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { makeStyles } from 'tss-react/mui';
 
-import { IReduxState } from '../../../app/types';
+import { IReduxState, IStore } from '../../../app/types';
 import {
     IconBell,
     IconCalendar,
@@ -24,6 +24,7 @@ import {
     getVideoDeviceSelectionDialogProps
 } from '../../../device-selection/functions.web';
 import { checkBlurSupport } from '../../../virtual-background/functions';
+import { iAmVisitor } from '../../../visitors/functions';
 import {
     submitModeratorTab,
     submitMoreTab,
@@ -71,7 +72,7 @@ interface IProps {
     /**
      * Invoked to save changed settings.
      */
-    dispatch: Function;
+    dispatch: IStore['dispatch'];
 
     /**
      * Indicates whether the device selection dialog is displayed on the
@@ -141,6 +142,7 @@ function _mapStateToProps(state: IReduxState, ownProps: any) {
     const showNotificationsSettings = Object.keys(enabledNotifications).length > 0;
     const virtualBackgroundSupported = checkBlurSupport();
     const tabs: IDialogTab<any>[] = [];
+    const _iAmVisitor = iAmVisitor(state);
 
     if (showDeviceSettings) {
         tabs.push({
@@ -165,7 +167,7 @@ function _mapStateToProps(state: IReduxState, ownProps: any) {
             submit: (newState: any) => submitAudioDeviceSelectionTab(newState, isDisplayedOnWelcomePage),
             icon: IconVolumeUp
         });
-        tabs.push({
+        !_iAmVisitor && tabs.push({
             name: SETTINGS_TABS.VIDEO,
             component: VideoDeviceSelection,
             labelKey: 'settings.video',
@@ -189,23 +191,33 @@ function _mapStateToProps(state: IReduxState, ownProps: any) {
         });
     }
 
-    if (virtualBackgroundSupported) {
+    if (virtualBackgroundSupported && !_iAmVisitor) {
         tabs.push({
             name: SETTINGS_TABS.VIRTUAL_BACKGROUND,
             component: VirtualBackgroundTab,
             labelKey: 'virtualBackground.title',
-            props: getVirtualBackgroundTabProps(state),
+            props: getVirtualBackgroundTabProps(state, isDisplayedOnWelcomePage),
+            propsUpdateFunction: (tabState: any, newProps: ReturnType<typeof getVirtualBackgroundTabProps>,
+                    tabStates: any) => {
+                const videoTabState = tabStates[tabs.findIndex(tab => tab.name === SETTINGS_TABS.VIDEO)];
+
+                return {
+                    ...newProps,
+                    selectedVideoInputId: videoTabState.selectedVideoInputId || newProps.selectedVideoInputId,
+                    options: tabState.options
+                };
+            },
             submit: (newState: any) => submitVirtualBackgroundTab(newState),
             cancel: () => {
-                const { _virtualBackground } = getVirtualBackgroundTabProps(state);
+                const { options } = getVirtualBackgroundTabProps(state, isDisplayedOnWelcomePage);
 
                 return submitVirtualBackgroundTab({
                     options: {
-                        backgroundType: _virtualBackground.backgroundType,
-                        enabled: _virtualBackground.backgroundEffectEnabled,
-                        url: _virtualBackground.virtualSource,
-                        selectedThumbnail: _virtualBackground.selectedThumbnail,
-                        blurValue: _virtualBackground.blurValue
+                        backgroundType: options.backgroundType,
+                        enabled: options.backgroundEffectEnabled,
+                        url: options.virtualSource,
+                        selectedThumbnail: options.selectedThumbnail,
+                        blurValue: options.blurValue
                     }
                 }, true);
             },
@@ -213,7 +225,7 @@ function _mapStateToProps(state: IReduxState, ownProps: any) {
         });
     }
 
-    if (showSoundsSettings || showNotificationsSettings) {
+    if ((showSoundsSettings || showNotificationsSettings) && !_iAmVisitor) {
         tabs.push({
             name: SETTINGS_TABS.NOTIFICATIONS,
             component: NotificationsTab,
@@ -236,7 +248,7 @@ function _mapStateToProps(state: IReduxState, ownProps: any) {
         });
     }
 
-    if (showModeratorSettings) {
+    if (showModeratorSettings && !_iAmVisitor) {
         tabs.push({
             name: SETTINGS_TABS.MODERATOR,
             component: ModeratorTab,
@@ -269,7 +281,7 @@ function _mapStateToProps(state: IReduxState, ownProps: any) {
         });
     }
 
-    if (showCalendarSettings) {
+    if (showCalendarSettings && !_iAmVisitor) {
         tabs.push({
             name: SETTINGS_TABS.CALENDAR,
             component: CalendarTab,
@@ -278,7 +290,7 @@ function _mapStateToProps(state: IReduxState, ownProps: any) {
         });
     }
 
-    tabs.push({
+    !_iAmVisitor && tabs.push({
         name: SETTINGS_TABS.SHORTCUTS,
         component: ShortcutsTab,
         labelKey: 'settings.shortcuts',
@@ -295,7 +307,7 @@ function _mapStateToProps(state: IReduxState, ownProps: any) {
         icon: IconShortcuts
     });
 
-    if (showMoreTab) {
+    if (showMoreTab && !_iAmVisitor) {
         tabs.push({
             name: SETTINGS_TABS.MORE,
             component: MoreTab,

@@ -64,6 +64,10 @@ function send_event(room)
         polls_count = room._muc_polls_count or 0;
     };
 
+    if room.created_timestamp then
+        event_properties.duration = (os.time() * 1000 - room.created_timestamp) / 1000;
+    end
+
     local event = {
         api_key = amplitude_api_key;
         events = {
@@ -95,7 +99,7 @@ function on_message(event)
 
     local session = event.origin;
     if not session or not session.jitsi_web_query_room then
-        return false;
+        return;
     end
 
     -- get room name with tenant and find room.
@@ -103,7 +107,7 @@ function on_message(event)
     if not room then
         module:log('warn', 'No room found found for %s/%s',
             session.jitsi_web_query_prefix, session.jitsi_web_query_room);
-        return false;
+        return;
     end
 
     if not room._muc_messages_count then

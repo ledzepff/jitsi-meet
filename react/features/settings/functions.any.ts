@@ -10,12 +10,12 @@ import {
 } from '../base/participants/functions';
 import { toState } from '../base/redux/functions';
 import { getHideSelfView } from '../base/settings/functions';
-import { getLocalVideoTrack } from '../base/tracks/functions.any';
 import { parseStandardURIString } from '../base/util/uri';
 import { isStageFilmstripEnabled } from '../filmstrip/functions';
 import { isFollowMeActive } from '../follow-me/functions';
 import { getParticipantsPaneConfig } from '../participants-pane/functions';
 import { isReactionsEnabled } from '../reactions/functions.any';
+import { iAmVisitor } from '../visitors/functions';
 
 /**
  * Used for web. Indicates if the setting section is enabled.
@@ -59,8 +59,7 @@ export function normalizeUserInputURL(url: string) {
         const urlRegExp = new RegExp('^(\\w+://)?(.+)$');
         const urlComponents = urlRegExp.exec(url);
 
-        if (urlComponents && (!urlComponents[1]
-                || !urlComponents[1].startsWith('http'))) {
+        if (urlComponents && !urlComponents[1]?.startsWith('http')) {
             url = `https://${urlComponents[2]}`;
         }
 
@@ -115,11 +114,22 @@ export function getNotificationsMap(stateful: IStateful) {
 export function getMoreTabProps(stateful: IStateful) {
     const state = toState(stateful);
     const stageFilmstripEnabled = isStageFilmstripEnabled(state);
+    const language = i18next.language || DEFAULT_LANGUAGE;
+    const configuredTabs: string[] = interfaceConfig.SETTINGS_SECTIONS || [];
+
+    // when self view is controlled by the config we hide the settings
+    const { disableSelfView, disableSelfViewSettings } = state['features/base/config'];
 
     return {
+        currentLanguage: language,
+        disableHideSelfView: disableSelfViewSettings || disableSelfView,
+        hideSelfView: getHideSelfView(state),
+        iAmVisitor: iAmVisitor(state),
+        languages: LANGUAGES,
+        maxStageParticipants: state['features/base/settings'].maxStageParticipants,
+        showLanguageSettings: configuredTabs.includes('language'),
         showPrejoinPage: !state['features/base/settings'].userSelectedSkipPrejoin,
         showPrejoinSettings: state['features/base/config'].prejoinConfig?.enabled,
-        maxStageParticipants: state['features/base/settings'].maxStageParticipants,
         stageFilmstripEnabled
     };
 }
@@ -190,25 +200,15 @@ export function getProfileTabProps(stateful: IStateful) {
     } = state['features/base/conference'];
     const { hideEmailInSettings } = state['features/base/config'];
     const localParticipant = getLocalParticipant(state);
-    const language = i18next.language || DEFAULT_LANGUAGE;
-    const configuredTabs: string[] = interfaceConfig.SETTINGS_SECTIONS || [];
-
-    // when self view is controlled by the config we hide the settings
-    const { disableSelfView, disableSelfViewSettings } = state['features/base/config'];
 
     return {
         authEnabled: Boolean(conference && authEnabled),
         authLogin,
-        disableHideSelfView: disableSelfViewSettings || disableSelfView,
-        currentLanguage: language,
         displayName: localParticipant?.name,
         email: localParticipant?.email,
         hideEmailInSettings,
-        hideSelfView: getHideSelfView(state),
         id: localParticipant?.id,
-        languages: LANGUAGES,
-        readOnlyName: isNameReadOnly(state),
-        showLanguageSettings: configuredTabs.includes('language')
+        readOnlyName: isNameReadOnly(state)
     };
 }
 
@@ -270,23 +270,4 @@ export function getAudioSettingsVisibility(state: IReduxState) {
  */
 export function getVideoSettingsVisibility(state: IReduxState) {
     return state['features/settings'].videoSettingsVisible;
-}
-
-/**
- * Returns the properties for the "Virtual Background" tab from settings dialog from Redux
- * state.
- *
- * @param {(Function|Object)} stateful -The (whole) redux state, or redux's
- * {@code getState} function to be used to retrieve the state.
- * @returns {Object} - The properties for the "Shortcuts" tab from settings
- * dialog.
- */
-export function getVirtualBackgroundTabProps(stateful: IStateful) {
-    const state = toState(stateful);
-
-    return {
-        _virtualBackground: state['features/virtual-background'],
-        selectedThumbnail: state['features/virtual-background'].selectedThumbnail,
-        _jitsiTrack: getLocalVideoTrack(state['features/base/tracks'])?.jitsiTrack
-    };
 }

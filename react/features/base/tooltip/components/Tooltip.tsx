@@ -16,7 +16,7 @@ const ANIMATION_DURATION = 0.2;
 interface IProps {
     children: ReactElement;
     containerClassName?: string;
-    content: string;
+    content: string | ReactElement;
     position?: TOOLTIP_POSITION;
 }
 
@@ -91,6 +91,10 @@ const Tooltip = ({ containerClassName, content, children, position = 'top' }: IP
     };
 
     const onPopoverOpen = useCallback(() => {
+        if (isUnmounting) {
+            return;
+        }
+
         clearTimeout(timeoutID.current.close);
         timeoutID.current.close = 0;
         if (!visible) {
@@ -102,7 +106,7 @@ const Tooltip = ({ containerClassName, content, children, position = 'top' }: IP
                 }, TOOLTIP_DELAY);
             }
         }
-    }, [ visible, isVisible ]);
+    }, [ visible, isVisible, isUnmounting ]);
 
     const onPopoverClose = useCallback(() => {
         clearTimeout(timeoutID.current.open);

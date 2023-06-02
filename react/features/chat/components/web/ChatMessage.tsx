@@ -23,7 +23,7 @@ interface IProps extends AbstractProps {
 const styles = (theme: Theme) => {
     return {
         chatMessageWrapper: {
-            maxWidth: 'calc(100% - 40px)' // 100% - avatar and margin
+            maxWidth: '100%'
         },
 
         chatMessage: {
@@ -31,9 +31,9 @@ const styles = (theme: Theme) => {
             padding: '12px',
             backgroundColor: theme.palette.ui02,
             borderRadius: '4px 12px 12px 12px',
-            boxSizing: 'border-box' as const,
             maxWidth: '100%',
             marginTop: '4px',
+            boxSizing: 'border-box' as const,
 
             '&.privatemessage': {
                 backgroundColor: theme.palette.support05
@@ -127,7 +127,7 @@ class ChatMessage extends AbstractChatMessage<IProps> {
 
         return (
             <div
-                className = { classes.chatMessageWrapper }
+                className = { clsx(classes.chatMessageWrapper, type) }
                 id = { this.props.message.messageId }
                 tabIndex = { -1 }>
                 <div

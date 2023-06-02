@@ -43,7 +43,7 @@ export default class ToolboxItem extends AbstractToolboxItem<IProps> {
      * @returns {void}
      */
     _onKeyPress(event?: React.KeyboardEvent) {
-        if (event?.key === 'Enter' || event?.key === ' ') {
+        if (event?.key === 'Enter') {
             event.preventDefault();
             this.props.onClick();
         }
@@ -87,14 +87,16 @@ export default class ToolboxItem extends AbstractToolboxItem<IProps> {
         const useTooltip = this.tooltip && this.tooltip.length > 0;
 
         if (contextMenu) {
-            return (<ContextMenuItem
-                accessibilityLabel = { this.accessibilityLabel }
-                disabled = { disabled }
-                icon = { icon }
-                onClick = { onClick }
-                onKeyDown = { onKeyDown }
-                onKeyPress = { this._onKeyPress }
-                text = { this.label } />);
+            return (
+                <ContextMenuItem
+                    accessibilityLabel = { this.accessibilityLabel }
+                    disabled = { disabled }
+                    icon = { icon }
+                    onClick = { onClick }
+                    onKeyDown = { onKeyDown }
+                    onKeyPress = { this._onKeyPress }
+                    text = { this.label } />
+            );
         }
         let children = (
             <Fragment>
