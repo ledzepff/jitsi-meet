@@ -1,0 +1,103 @@
+BUILD_DIR = build
+CLEANCSS = .\node_modules\.bin\cleancss.cmd
+DEPLOY_DIR = libs
+LIBJITSIMEET_DIR = node_modules\lib-jitsi-meet
+OLM_DIR = "node_modules\@matrix-org\olm"
+TF_WASM_DIR = "node_modules\@tensorflow\tfjs-backend-wasm\dist\"
+RNNOISE_WASM_DIR = "node_modules\@jitsi\rnnoise-wasm\dist"
+TFLITE_WASM = react\features\stream-effects\virtual-background\vendor\tflite
+MEET_MODELS_DIR  = react\features\stream-effects\virtual-background\vendor\models
+FACE_MODELS_DIR = "node_modules\@vladmandic\human-models\models"
+NODE_SASS = .\node_modules\.bin\sass.cmd
+NPM = npm
+OUTPUT_DIR = .
+STYLES_BUNDLE = css\all.bundle.css
+STYLES_DESTINATION = css\all.css
+STYLES_MAIN = css\main.scss
+WEBPACK = .\node_modules\.bin\webpack.cmd
+WEBPACK_DEV_SERVER = .\node_modules\.bin\webpack.cmd serve --mode development
+
+export NODE_OPTIONS="--max-old-space-size=8192"
+
+all: compile deploy clean
+
+compile:
+	$(WEBPACK)
+
+clean:
+	rmdir /s /q $(BUILD_DIR)
+
+.NOTPARALLEL:
+deploy: deploy-init deploy-appbundle deploy-rnnoise-binary deploy-tflite deploy-meet-models deploy-lib-jitsi-meet deploy-olm deploy-tf-wasm deploy-css deploy-local deploy-face-landmarks
+
+deploy-init:
+	rmdir /s /q $(DEPLOY_DIR)
+	mkdir $(DEPLOY_DIR)
+
+deploy-appbundle:
+	copy $(BUILD_DIR)\app.bundle.min.js $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\app.bundle.min.js.map $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\do_external_connect.min.js $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\do_external_connect.min.js.map $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\external_api.min.js $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\external_api.min.js.map $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\dial_in_info_bundle.min.js $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\dial_in_info_bundle.min.js.map $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\alwaysontop.min.js $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\alwaysontop.min.js.map $(DEPLOY_DIR)
+	copy $(OUTPUT_DIR)\analytics-ga.js $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\analytics-ga.min.js $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\analytics-ga.min.js.map $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\face-landmarks-worker.min.js $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\face-landmarks-worker.min.js.map $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\noise-suppressor-worklet.min.js $(DEPLOY_DIR)
+	copy $(BUILD_DIR)\noise-suppressor-worklet.min.js.map $(DEPLOY_DIR)
+
+	copy $(BUILD_DIR)\close3.min.js $(DEPLOY_DIR)
+
+deploy-lib-jitsi-meet:
+	copy $(LIBJITSIMEET_DIR)\dist\umd\lib-jitsi-meet.min.js $(DEPLOY_DIR)
+	copy $(LIBJITSIMEET_DIR)\dist\umd\lib-jitsi-meet.min.map $(DEPLOY_DIR)
+	copy $(LIBJITSIMEET_DIR)\dist\umd\lib-jitsi-meet.e2ee-worker.js $(DEPLOY_DIR)
+	copy $(LIBJITSIMEET_DIR)\connection_optimization\external_connect.js $(DEPLOY_DIR)
+	copy $(LIBJITSIMEET_DIR)\modules\browser\capabilities.json $(DEPLOY_DIR)
+
+deploy-olm:
+	copy $(OLM_DIR)\olm.wasm $(DEPLOY_DIR)
+
+deploy-tf-wasm:
+	copy $(TF_WASM_DIR)\*.wasm $(DEPLOY_DIR)
+
+deploy-rnnoise-binary:
+	copy $(RNNOISE_WASM_DIR)\rnnoise.wasm $(DEPLOY_DIR)
+
+deploy-tflite:
+	copy $(TFLITE_WASM)\*.wasm $(DEPLOY_DIR)
+
+deploy-meet-models:
+	copy $(MEET_MODELS_DIR)\*.tflite $(DEPLOY_DIR)
+
+deploy-face-landmarks:
+	copy $(FACE_MODELS_DIR)\blazeface-front.bin $(DEPLOY_DIR)
+	copy $(FACE_MODELS_DIR)\blazeface-front.json $(DEPLOY_DIR)
+	copy $(FACE_MODELS_DIR)\emotion.bin $(DEPLOY_DIR)
+	copy $(FACE_MODELS_DIR)\emotion.json $(DEPLOY_DIR)
+
+deploy-css:
+	$(NODE_SASS) $(STYLES_MAIN) $(STYLES_BUNDLE)
+	$(CLEANCSS) --skip-rebase $(STYLES_BUNDLE) > $(STYLES_DESTINATION)
+	del $(STYLES_BUNDLE)
+
+deploy-local:
+	([ ! -x deploy-local.sh ] || .\deploy-local.sh)
+
+.NOTPARALLEL:
+dev: deploy-init deploy-css deploy-rnnoise-binary deploy-tflite deploy-meet-models deploy-lib-jitsi-meet deploy-olm deploy-tf-wasm deploy-face-landmarks
+	$(WEBPACK_DEV_SERVER)
+
+source-package:
+	mkdir source_package\jitsi-meet\css
+	copy -r *.js *.html resources\*.txt connection_optimization favicon.ico fonts images libs static sounds LICENSE lang source_package\jitsi-meet
+	copy css\all.css source_package\jitsi-meet\css
+	(cd source_package ; tar cjf ..\jitsi-meet.tar.bz2 jitsi-meet)
+	rmdir /s /q source_package
