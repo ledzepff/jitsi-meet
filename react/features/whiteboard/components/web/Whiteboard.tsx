@@ -141,7 +141,6 @@ const Whiteboard = (props: WithTranslation): JSX.Element => {
                                 // @ts-ignore
                                 excalidrawRef,
 
-                                theme: THEME.DARK,
                                 UIOptions: WHITEBOARD_UI_OPTIONS
                             }}
                             getCollabAPI = { getCollabAPI } />
