@@ -15,16 +15,18 @@ export const WHITEBOARD_ID = 'whiteboard';
  */
 export const WHITEBOARD_UI_OPTIONS: AppProps['UIOptions'] = {
     canvasActions: {
-        hideChangeViewBackgroundColorMenuItem: true,
-        hideClearCanvasMenuItem: true,
-        hideExportMenuItem: { saveFileToDisk: true },
-        loadScene: true,
-        hideSaveToActiveFileMenuItem: true,
-        hideToggleThemeMenuItem: true,
-        hideSaveAsImageMenuItem: true,
-        hideLoanSceneMenuItem: true,
-        hideHelpMenuItem: true,
-        hideExcalidrawLinksMenuItem: true
+        showChangeViewBackgroundColors: true,
+        showClearCanvas: true,
+        exportOptions: { saveFileToDisk: false },
+        loadScene: false,
+        showSaveSceneTo: false,
+        showToggleTheme: true,
+        showExportAsImage: true,
+        showLoadScene: false,
+        showHelp: false,
+        showExcalidrawLinks: false,
+        showLibrary: false,
+        showHelpButton: false
     }
 };
 
